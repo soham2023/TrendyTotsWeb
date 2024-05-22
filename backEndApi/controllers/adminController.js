@@ -119,9 +119,20 @@ const signIn = async (req, res) => {
     }
 }
 
+/*------------------------------------------------- SignOut --------------------------------------------------*/
+
+const signOut = (req, res) => {
+    res.cookie('token', '', { maxAge: 0, httpOnly: true });
+    return res.status(200).json({
+        success: true,
+        message: 'Successfully signed out',
+    });
+};
+
 /*------------------------------------------------- Exports --------------------------------------------------*/
 
 module.exports = {
     signUp,
     signIn,
+    signOut,
 };
