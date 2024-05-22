@@ -16,10 +16,10 @@ const signUp = async (req, res) => {
     console.log(email, password, confirmPassword, role);
     
     // Check if all required fields are provided
-    if (!email || !password || !confirmPassword || !role) {
+    if (!email || !password || !confirmPassword) {
         return res.status(400).json({
             success: false,
-            message: 'Please fill all the fields',
+            message: 'Please Fill All The Fields',
         });
     }
 
@@ -28,7 +28,7 @@ const signUp = async (req, res) => {
     if (!validEmail) {
         return res.status(400).json({
             success: false,
-            message: 'Please enter a valid email id',
+            message: 'Please Enter Valid Email id',
         });
     }
 
@@ -37,39 +37,35 @@ const signUp = async (req, res) => {
         if (password !== confirmPassword) {
             return res.status(400).json({
                 success: false,
-                message: 'Passwords do not match',
+                message: 'Passwords Do Not Match',
             });
         }
 
-        // Check if email already exists
-        const existingAdmin = await adminModel.findOne({ email });
-        if (existingAdmin) {
-            return res.status(400).json({
-                success: false,
-                message: `Account already exists with the provided email id ${email}`,
-            });
-        }
-
-        // Hash the password before saving
-        const hashedPassword = await bcrypt.hash(password, 10);
+        // Set default role to 'user' if not provided
+        const userRole = role || 'user';
 
         // Create new admin/user
         const newAdmin = new adminModel({
             email,
-            password: hashedPassword,
-            role: role || 'user', // Default role is 'user'
+            password,
+            role: userRole,
         });
 
         const result = await newAdmin.save();
-        return res.status(201).json({
+        return res.status(200).json({
             success: true,
             data: result,
         });
     } catch (error) {
-        console.error('Error during sign-up:', error);
-        return res.status(500).json({
+        if (error.code === 11000) {
+            return res.status(400).json({
+                success: false,
+                message: `Account Already Exists with Provided Email Id ${email}`,
+            });
+        }
+        return res.status(400).json({
             success: false,
-            message: 'Internal server error',
+            message: error.message,
         });
     }
 };
