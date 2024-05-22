@@ -3,7 +3,12 @@ const { SECRET_KEY } = process.env;
 
 const authMiddleware = (requiredRoles) => {
     return (req, res, next) => {
-        const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+        // Skip authentication for GET requests
+        if (req.method === 'GET') {
+            return next();
+        }
+
+        const token = req.cookies.token || (req.headers.authorization ? req.headers.authorization.split(' ')[1] : null);
         
         if (!token) {
             return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });

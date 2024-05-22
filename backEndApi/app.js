@@ -3,8 +3,8 @@ const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
 const helmet = require('helmet');
 const cors = require('cors');
-const path = require('path');
-require('dotenv').config();
+const path = require('path'); // Import path module
+require('dotenv').config(); // Load environment variables from .env file
 const connectToDatabase = require('./config/dbconn');
 
 const app = express();
@@ -22,14 +22,12 @@ connectToDatabase();
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
-const publicRoutes = require('./routes/publicRoutes');
-const userRoutes = require('./routes/userRoutes');
+const productRoutes = require('./routes/productRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 
 // Use routes
 app.use('/api/auth', authRoutes);
-app.use('/api/public', publicRoutes);
-app.use('/api/user', userRoutes);
+app.use('/api/products', productRoutes); // Adjusted the path for clarity
 app.use('/api/admin', adminRoutes);
 
 // Error handling middleware
