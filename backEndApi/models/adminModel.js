@@ -12,7 +12,6 @@ const adminSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: true,
         minLength: [5, 'Minimum length of password is 5'],
     },
     role: {
@@ -20,6 +19,11 @@ const adminSchema = new mongoose.Schema({
         enum: ['admin', 'user'],
         default: 'user',
     },
+    googleId: {
+        type: String,
+        unique: true,
+        sparse: true,
+    }
 }, {
     timestamps: true
 });

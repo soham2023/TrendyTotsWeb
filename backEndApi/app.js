@@ -3,9 +3,12 @@ const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
 const helmet = require('helmet');
 const cors = require('cors');
-const path = require('path'); // Import path module
-require('dotenv').config(); // Load environment variables from .env file
+const path = require('path');
+const passport = require('passport');
+const session = require('express-session');
+require('dotenv').config();
 const connectToDatabase = require('./config/dbconn');
+require('./config/passport');
 
 const app = express();
 
@@ -15,7 +18,14 @@ app.use(cookieParser());
 app.use(morgan('dev'));
 app.use(helmet());
 app.use(cors());
-app.use('/public', express.static(path.join(__dirname, 'public'))); // Serve static files
+app.use('/public', express.static(path.join(__dirname, 'public')));
+
+// Express session
+app.use(session({ secret: process.env.SECRET_KEY, resave: false, saveUninitialized: true }));
+
+// Passport middleware
+app.use(passport.initialize());
+app.use(passport.session());
 
 // Connect to MongoDB
 connectToDatabase();
@@ -27,7 +37,7 @@ const adminRoutes = require('./routes/adminRoutes');
 
 // Use routes
 app.use('/api/auth', authRoutes);
-app.use('/api/products', productRoutes); // Adjusted the path for clarity
+app.use('/api/products', productRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Error handling middleware
