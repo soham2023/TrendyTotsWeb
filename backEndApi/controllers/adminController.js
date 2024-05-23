@@ -19,7 +19,7 @@ const signUp = async (req, res) => {
     if (!email || !password || !confirmPassword) {
         return res.status(400).json({
             success: false,
-            message: 'Please Fill All The Fields',
+            message: 'Please fill all the fields',
         });
     }
 
@@ -28,7 +28,7 @@ const signUp = async (req, res) => {
     if (!validEmail) {
         return res.status(400).json({
             success: false,
-            message: 'Please Enter Valid Email id',
+            message: 'Please enter a valid email address',
         });
     }
 
@@ -37,9 +37,12 @@ const signUp = async (req, res) => {
         if (password !== confirmPassword) {
             return res.status(400).json({
                 success: false,
-                message: 'Passwords Do Not Match',
+                message: 'Passwords do not match',
             });
         }
+
+        // Hash the password
+        const hashedPassword = await bcrypt.hash(password, 10);
 
         // Set default role to 'user' if not provided
         const userRole = role || 'user';
@@ -47,7 +50,7 @@ const signUp = async (req, res) => {
         // Create new admin/user
         const newAdmin = new adminModel({
             email,
-            password,
+            password: hashedPassword,
             role: userRole,
         });
 
@@ -60,12 +63,12 @@ const signUp = async (req, res) => {
         if (error.code === 11000) {
             return res.status(400).json({
                 success: false,
-                message: `Account Already Exists with Provided Email Id ${email}`,
+                message: `Account already exists with provided email ${email}`,
             });
         }
-        return res.status(400).json({
+        return res.status(500).json({
             success: false,
-            message: error.message,
+            message: 'Internal server error',
         });
     }
 };
@@ -113,18 +116,28 @@ const signIn = async (req, res) => {
             message: 'Internal server error'
         });
     }
-}
+};
 
 /*------------------------------------------------- SignOut --------------------------------------------------*/
 
 const signOut = (req, res) => {
+    // Check if the token exists in the cookies
+    const token = req.cookies.token;
+
+    if (!token) {
+        return res.status(400).json({
+            success: false,
+            message: 'No user is currently signed in',
+        });
+    }
+
+    // Clear the token cookie to sign out the user
     res.cookie('token', '', { maxAge: 0, httpOnly: true });
     return res.status(200).json({
         success: true,
         message: 'Successfully signed out',
     });
 };
-
 /*------------------------------------------------- Exports --------------------------------------------------*/
 
 module.exports = {
@@ -132,4 +145,4 @@ module.exports = {
     signIn,
     signOut,
 };
-// trying to push
+// bugs fixed
