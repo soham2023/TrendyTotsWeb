@@ -147,12 +147,14 @@ const forgotPassword = async (req, res) => {
         }
 
         // Generate OTP
-        const otp = otpGenerator.generate(8, { 
-            upperCase: false, 
-            specialChars: false, 
-            alphabets: false, 
-            digits: true 
-        });
+        const generateNumericOTP = (length) => {
+            let otp = '';
+            for (let i = 0; i < length; i++) {
+                otp += Math.floor(Math.random() * 10).toString();
+            }
+            return otp;
+        };
+        const otp = generateNumericOTP(8); 
 
         // Save OTP and its expiry time in the database
         admin.resetPasswordOTP = otp;
@@ -170,7 +172,7 @@ const forgotPassword = async (req, res) => {
             auth: {
                 
                 user: '',
-                pass: ''
+                pass: '',
             }
         });
 
