@@ -154,7 +154,7 @@ const forgotPassword = async (req, res) => {
             }
             return otp;
         };
-        const otp = generateNumericOTP(8); 
+        const otp = generateNumericOTP(6); 
 
         // Save OTP and its expiry time in the database
         admin.resetPasswordOTP = otp;
