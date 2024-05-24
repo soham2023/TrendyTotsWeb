@@ -1,6 +1,7 @@
 /*const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const User = require('../models/adminModel'); // Update the path based on your project structure
+require('dotenv').config();
 
 passport.use(new GoogleStrategy({
     clientID: GOOGLE_CLIENT_ID,
@@ -33,5 +34,4 @@ passport.deserializeUser((id, done) => {
   User.findById(id, (err, user) => {
     done(err, user);
   });
-});
-*/
+});*/

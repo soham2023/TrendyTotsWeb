@@ -147,7 +147,12 @@ const forgotPassword = async (req, res) => {
         }
 
         // Generate OTP
-        const otp = otpGenerator.generate(6, { upperCase: false, specialChars: false });
+        const otp = otpGenerator.generate(8, { 
+            upperCase: false, 
+            specialChars: false, 
+            alphabets: false, 
+            digits: true 
+        });
 
         // Save OTP and its expiry time in the database
         admin.resetPasswordOTP = otp;
@@ -159,14 +164,18 @@ const forgotPassword = async (req, res) => {
             // Configure your email provider here
             // Example configuration for Gmail:
             service: 'gmail',
+            host: "smtp.gmail.com",
+            port: 587,
+            secure: false, // or 'STARTTLS'
             auth: {
-                user: 'trendytots26@gmail.com',
+                
+                user: '',
                 pass: ''
             }
         });
 
         const mailOptions = {
-            from: 'trendytots@gmail.com',
+            from: '',
             to: email,
             subject: 'Password Reset OTP',
             text: `Your OTP for password reset is: ${otp}`
@@ -194,6 +203,7 @@ const forgotPassword = async (req, res) => {
         });
     }
 };
+
 
 /*------------------------------------------------- Reset Password --------------------------------------------------*/
 
