@@ -14,13 +14,21 @@ const userSchema = new mongoose.Schema({
     password: {
         type: String,
         required: true,
-        minLength: [5, 'Minimum length of password is 5'],
+        minlength: [5, 'Minimum length of password is 5'],
     },
     role: {
         type: String,
         enum: ['admin', 'user'],
         default: 'user',
     },
+    resetPasswordOTP: {
+        type: String,
+        default: undefined,
+    },
+    resetPasswordOTPExpires: {
+        type: Date,
+        default: undefined,
+    }
 }, {
     timestamps: true
 });
@@ -40,10 +48,10 @@ userSchema.pre('save', async function(next) {
 });
 
 // Instance method to generate JWT token
-userSchema.methods.jwtToken = function() {
+userSchema.methods.generateJWT = function() {
     try {
         return JWT.sign(
-            { id: this._id, email: this.email },
+            { id: this._id, email: this.email, role: this.role },
             process.env.SECRET,
             { expiresIn: '24h' }
         );

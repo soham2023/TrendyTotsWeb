@@ -1,18 +1,23 @@
 const adminModel = require('../models/adminModel.js');
+const userModel = require('../models/userModel.js');
 const emailValidator = require('email-validator');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { SECRET_KEY } = process.env;
-const crypto = require('crypto');
-const nodemailer = require('nodemailer'); // Import nodemailer for sending emails
-const otpGenerator = require('otp-generator'); // Import otp-generator for generating OTPs
-require('dotenv').config()
+const nodemailer = require('nodemailer');
+const otpGenerator = require('otp-generator');
+require('dotenv').config();
 
+const { SECRET_KEY, ADMINUSER, PASS, EMAIL_FROM } = process.env;
 
 if (!SECRET_KEY) {
     console.error('SECRET_KEY is not defined in environment variables');
     process.exit(1);
 }
+
+// Helper function to get user model based on role
+const getModelByRole = (role) => {
+    return role === 'admin' ? adminModel : userModel;
+};
 
 /*------------------------------------------------- SignUp --------------------------------------------------*/
 
@@ -52,14 +57,17 @@ const signUp = async (req, res) => {
         // Set default role to 'user' if not provided
         const userRole = role || 'user';
 
+        // Get the appropriate model based on the role
+        const model = getModelByRole(userRole);
+
         // Create new admin/user
-        const newAdmin = new adminModel({
+        const newUser = new model({
             email,
             password: hashedPassword,
             role: userRole,
         });
 
-        const result = await newAdmin.save();
+        const result = await newUser.save();
         return res.status(200).json({
             success: true,
             data: result,
@@ -123,13 +131,10 @@ const signIn = async (req, res) => {
     }
 };
 
-
 /*------------------------------------------------- Forgot Password --------------------------------------------------*/
 
 const forgotPassword = async (req, res) => {
-    const { email } = req.body;
-    let user = process.env.ADMINUSER
-    let pass = process.env.PASS
+    const { email, role } = req.body;
 
     if (!email) {
         return res.status(400).json({
@@ -138,8 +143,7 @@ const forgotPassword = async (req, res) => {
         });
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!emailValidator.validate(email)) {
         return res.status(400).json({
             success: false,
             message: 'Invalid email format',
@@ -147,16 +151,17 @@ const forgotPassword = async (req, res) => {
     }
 
     try {
-        const admin = await adminModel.findOne({ email });
-        
-        if (!admin) {
+        const userRole = role || 'user'; // Default role to 'user' if not provided
+        const model = getModelByRole(userRole);
+        const user = await model.findOne({ email });
+
+        if (!user) {
             return res.status(404).json({
                 success: false,
                 message: 'No account found with this email',
             });
         }
 
-        // Generate OTP
         const generateNumericOTP = (length) => {
             let otp = '';
             for (let i = 0; i < length; i++) {
@@ -164,27 +169,25 @@ const forgotPassword = async (req, res) => {
             }
             return otp;
         };
-        const otp = generateNumericOTP(6); 
+        const otp = generateNumericOTP(6);
 
-        // Save OTP and its expiry time in the database
-        admin.resetPasswordOTP = otp; // Ideally, you should hash the OTP before storing
-        admin.resetPasswordOTPExpires = Date.now() + 600000; // OTP expires in 10 minutes
-        await admin.save();
+        user.resetPasswordOTP = await bcrypt.hash(otp, 10);
+        user.resetPasswordOTPExpires = Date.now() + 600000; // OTP expires in 10 minutes
+        await user.save();
 
-        // Send OTP via email
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
-                user,
-                pass
-            }
+                user: ADMINUSER,
+                pass: PASS,
+            },
         });
 
         const mailOptions = {
-            from: process.env.EMAIL_FROM || 'your-default-email@example.com',
+            from: EMAIL_FROM || 'your-default-email@example.com',
             to: email,
             subject: 'Password Reset OTP',
-            text: `Your OTP for password reset is: ${otp}`
+            text: `Your OTP for password reset is: ${otp}`,
         };
 
         transporter.sendMail(mailOptions)
@@ -199,57 +202,71 @@ const forgotPassword = async (req, res) => {
                 console.error('Error sending email:', error);
                 return res.status(500).json({
                     success: false,
-                    message: 'Failed to send OTP email'
+                    message: 'Failed to send OTP email',
                 });
             });
     } catch (error) {
         console.error('Error during forgot password:', error);
         return res.status(500).json({
             success: false,
-            message: 'Internal server error'
+            message: 'Internal server error',
         });
     }
 };
 
-
-
 /*------------------------------------------------- Reset Password --------------------------------------------------*/
 
 const resetPassword = async (req, res) => {
-    const { email, otp, newPassword, confirmPassword } = req.body;
-    
+    const { email, otp, newPassword, confirmPassword, role } = req.body;
+
     if (!email || !otp || !newPassword || !confirmPassword) {
         return res.status(400).json({
             success: false,
-            message: 'Please provide email, OTP, and new password',
+            message: 'Please provide email, OTP, new password, and confirm password',
+        });
+    }
+
+    if (newPassword !== confirmPassword) {
+        return res.status(400).json({
+            success: false,
+            message: 'Passwords do not match',
         });
     }
 
     try {
-        const admin = await adminModel.findOne({ email, resetPasswordOTP: otp, resetPasswordOTPExpires: { $gt: Date.now() } });
-        
-        if (!admin) {
+        const userRole = role || 'user'; // Default role to 'user' if not provided
+        const model = getModelByRole(userRole);
+        const user = await model.findOne({ email, resetPasswordOTPExpires: { $gt: Date.now() } });
+
+        if (!user) {
             return res.status(400).json({
                 success: false,
                 message: 'Invalid or expired OTP',
             });
         }
 
-        if (newPassword !== confirmPassword) {
+        if (typeof otp !== 'string' || typeof user.resetPasswordOTP !== 'string') {
+            console.error('OTP and hash must be strings:', { otp, resetPasswordOTP: user.resetPasswordOTP });
             return res.status(400).json({
                 success: false,
-                message: 'Passwords do not match',
+                message: 'Invalid OTP format',
             });
         }
 
-        // Hash the new password
+        const isValidOTP = await bcrypt.compare(otp, user.resetPasswordOTP);
+        if (!isValidOTP) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid or expired OTP',
+            });
+        }
+
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-        // Update user's password and clear reset OTP
-        admin.password = hashedPassword;
-        admin.resetPasswordOTP = undefined;
-        admin.resetPasswordOTPExpires = undefined;
-        await admin.save();
+        user.password = hashedPassword;
+        user.resetPasswordOTP = undefined;
+        user.resetPasswordOTPExpires = undefined;
+        await user.save();
 
         return res.status(200).json({
             success: true,
@@ -259,16 +276,14 @@ const resetPassword = async (req, res) => {
         console.error('Error during password reset:', error);
         return res.status(500).json({
             success: false,
-            message: 'Internal server error'
+            message: 'Internal server error',
         });
     }
 };
 
-
 /*------------------------------------------------- SignOut --------------------------------------------------*/
 
 const signOut = (req, res) => {
-    // Check if the token exists in the cookies
     const token = req.cookies.token;
 
     if (!token) {
@@ -278,13 +293,13 @@ const signOut = (req, res) => {
         });
     }
 
-    // Clear the token cookie to sign out the user
     res.cookie('token', '', { maxAge: 0, httpOnly: true });
     return res.status(200).json({
         success: true,
         message: 'Successfully signed out',
     });
 };
+
 /*------------------------------------------------- Exports --------------------------------------------------*/
 
 module.exports = {
@@ -292,6 +307,5 @@ module.exports = {
     signIn,
     signOut,
     forgotPassword,
-    resetPassword
-
+    resetPassword,
 };

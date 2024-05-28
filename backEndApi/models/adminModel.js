@@ -23,6 +23,14 @@ const adminSchema = new mongoose.Schema({
         type: String,
         unique: true,
         sparse: true,
+    },
+    resetPasswordOTP: {
+        type: String,
+        default: undefined,
+    },
+    resetPasswordOTPExpires: {
+        type: Date,
+        default: undefined,
     }
 }, {
     timestamps: true
@@ -32,7 +40,7 @@ adminSchema.methods = {
     jwtToken() {
         try {
             return JWT.sign(
-                { id: this._id, email: this.email },
+                { id: this._id, email: this.email, role: this.role },
                 process.env.SECRET,
                 { expiresIn: '24h' }
             );
