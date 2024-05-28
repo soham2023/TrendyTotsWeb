@@ -40,9 +40,30 @@ const productSchema = new mongoose.Schema({
         type: String,
         required: true,
         trim: true,
+    },
+    collection: {
+        type: String,
+        required: true,
+        validate: {
+            validator: function(value) {
+                return /^(summer-set|winter-set)$/.test(value); // Validate if the collection name is 'summer-set' or 'winter-set'
+            },
+            message: props => `${props.value} is not a valid collection name`
+        }
     }
 }, {
-    timestamps: true 
+    timestamps: true,
+    suppressReservedKeysWarning: true // Suppress the warning for using the 'collection' field
+});
+
+// Middleware to set the collection name based on the product name
+productSchema.pre('save', function(next) {
+    if (this.name === 'summer-set') {
+        this.collection = 'summer-set';
+    } else if (this.name === 'winter-set') {
+        this.collection = 'winter-set';
+    }
+    next();
 });
 
 module.exports = mongoose.model('Product', productSchema);

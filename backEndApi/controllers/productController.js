@@ -1,11 +1,14 @@
-const Product = require('../models/Product');
+const SummerSetProduct = require('../models/SummerSetProduct');
+const WinterSetProduct = require('../models/WinterSetProduct');
+const JeansProduct = require('../models/JeansProduct');
+const TShirtProduct = require('../models/TShirtProduct');
 const Upload = require('../helpers/upload');
 const { generateCustomId } = require("../helpers/uuid");
 
 // Create a new product
 const createProduct = async (req, res) => {
     try {
-        const { customId, name, color, variety, price, age, size, material } = req.body;
+        const {customId, name, color, variety, price, age, size, material } = req.body;
         let imageUrls = [];
 
         // Check if files are present in the request
@@ -21,10 +24,20 @@ const createProduct = async (req, res) => {
             }
         }
 
-        // Create a new instance of Product model with the provided customId
-        const newProduct = new Product({ customId, name, color, variety, price, age, size, material, images: imageUrls });
+        let newProduct;
+        if (name === 'summer-set') {
+            newProduct = new SummerSetProduct({ customId, name, color, variety, price, age, size, material, images: imageUrls });
+        } else if (name === 'winter-set') {
+            newProduct = new WinterSetProduct({ customId, name, color, variety, price, age, size, material, images: imageUrls });
+        } else if (name === 'jeans') {
+            newProduct = new JeansProduct({ customId, name, color, variety, price, age, size, material, images: imageUrls });
+        } else if (name === 't-shirt') {
+            newProduct = new TShirtProduct({ customId, name, color, variety, price, age, size, material, images: imageUrls });
+        } else {
+            return res.status(400).json({ success: false, msg: 'Invalid product name' });
+        }
 
-        // Save the new product to the database
+        // Save the new product to the appropriate collection
         const savedProduct = await newProduct.save();
 
         // Send success response with saved product data
@@ -35,20 +48,44 @@ const createProduct = async (req, res) => {
     }
 };
 
-// Get all products
+// Get all products from the specified collection
 const getProducts = async (req, res) => {
     try {
-        const products = await Product.find({});
+        const { collection } = req.query;
+        let products;
+        if (collection === 'summer-set') {
+            products = await SummerSetProduct.find({});
+        } else if (collection === 'winter-set') {
+            products = await WinterSetProduct.find({});
+        } else if (collection === 'jeans') {
+            products = await JeansProduct.find({});
+        } else if (collection === 't-shirt') {
+            products = await TShirtProduct.find({});
+        } else {
+            return res.status(400).json({ success: false, msg: 'Invalid collection' });
+        }
         res.status(200).json({ success: true, data: products });
     } catch (error) {
         res.status(400).json({ success: false, msg: error.message });
     }
 };
 
-// Get a product by CustomId
+// Get a product by CustomId from the specified collection
 const getProductByCustomId = async (req, res) => {
     try {
-        const product = await Product.findOne({ customId: req.params.customId });
+        const { collection, customId } = req.params;
+        let product;
+        if (collection === 'summer-set') {
+            product = await SummerSetProduct.findOne({ customId });
+        } else if (collection === 'winter-set') {
+            product = await WinterSetProduct.findOne({ customId });
+        } else if (collection === 'jeans') {
+            product = await JeansProduct.findOne({ customId });
+        } else if (collection === 't-shirt') {
+            product = await TShirtProduct.findOne({ customId });
+        } else {
+            return res.status(400).json({ success: false, msg: 'Invalid collection' });
+        }
         if (!product) {
             return res.status(404).json({ success: false, msg: 'Product not found' });
         }
@@ -58,10 +95,10 @@ const getProductByCustomId = async (req, res) => {
     }
 };
 
-// Update a product by CustomId
+// Update a product by CustomId in the specified collection
 const updateProductByCustomId = async (req, res) => {
     try {
-        const { customId } = req.params;
+        const { collection, customId } = req.params;
         const { name, color, variety, price, age, size, material } = req.body;
         const updatedData = { name, color, variety, price, age, size, material };
 
@@ -77,7 +114,18 @@ const updateProductByCustomId = async (req, res) => {
             updatedData.images = imageUrls;
         }
 
-        const updatedProduct = await Product.findOneAndUpdate({ customId }, updatedData, { new: true });
+        let updatedProduct;
+        if (collection === 'summer-set') {
+            updatedProduct = await SummerSetProduct.findOneAndUpdate({ customId }, updatedData, { new: true });
+        } else if (collection === 'winter-set') {
+            updatedProduct = await WinterSetProduct.findOneAndUpdate({ customId }, updatedData, { new: true });
+        } else if (collection === 'jeans') {
+            updatedProduct = await JeansProduct.findOneAndUpdate({ customId }, updatedData, { new: true });
+        } else if (collection === 't-shirt') {
+            updatedProduct = await TShirtProduct.findOneAndUpdate({ customId }, updatedData, { new: true });
+        } else {
+            return res.status(400).json({ success: false, msg: 'Invalid collection' });
+        }
         if (!updatedProduct) {
             return res.status(404).json({ success: false, msg: 'Product not found' });
         }
@@ -87,11 +135,22 @@ const updateProductByCustomId = async (req, res) => {
     }
 };
 
-// Delete a product by CustomId
+// Delete a product by CustomId from the specified collection
 const deleteProductByCustomId = async (req, res) => {
     try {
-        const { customId } = req.params;
-        const deletedProduct = await Product.findOneAndDelete({ customId });
+        const { collection, customId } = req.params;
+        let deletedProduct;
+        if (collection === 'summer-set') {
+            deletedProduct = await SummerSetProduct.findOneAndDelete({ customId });
+        } else if (collection === 'winter-set') {
+            deletedProduct = await WinterSetProduct.findOneAndDelete({ customId });
+        } else if (collection === 'jeans') {
+            deletedProduct = await JeansProduct.findOneAndDelete({ customId });
+        } else if (collection === 't-shirt') {
+            deletedProduct = await TShirtProduct.findOneAndDelete({ customId });
+        } else {
+            return res.status(400).json({ success: false, msg: 'Invalid collection' });
+        }
         if (!deletedProduct) {
             return res.status(404).json({ success: false, msg: 'Product not found' });
         }
@@ -108,3 +167,4 @@ module.exports = {
     updateProductByCustomId,
     deleteProductByCustomId
 };
+
