@@ -6,7 +6,7 @@ const { SECRET_KEY } = process.env;
 const crypto = require('crypto');
 const nodemailer = require('nodemailer'); // Import nodemailer for sending emails
 const otpGenerator = require('otp-generator'); // Import otp-generator for generating OTPs
-
+require('dotenv').config()
 
 
 if (!SECRET_KEY) {
@@ -128,11 +128,21 @@ const signIn = async (req, res) => {
 
 const forgotPassword = async (req, res) => {
     const { email } = req.body;
-    
+    let user = process.env.ADMINUSER
+    let pass = process.env.PASS
+
     if (!email) {
         return res.status(400).json({
             success: false,
             message: 'Please provide your email',
+        });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        return res.status(400).json({
+            success: false,
+            message: 'Invalid email format',
         });
     }
 
@@ -157,46 +167,41 @@ const forgotPassword = async (req, res) => {
         const otp = generateNumericOTP(6); 
 
         // Save OTP and its expiry time in the database
-        admin.resetPasswordOTP = otp;
+        admin.resetPasswordOTP = otp; // Ideally, you should hash the OTP before storing
         admin.resetPasswordOTPExpires = Date.now() + 600000; // OTP expires in 10 minutes
         await admin.save();
 
         // Send OTP via email
         const transporter = nodemailer.createTransport({
-            // Configure your email provider here
-            // Example configuration for Gmail:
             service: 'gmail',
-            host: "smtp.gmail.com",
-            port: 587,
-            secure: false, // or 'STARTTLS'
             auth: {
-                
-                user: '',
-                pass: '',
+                user,
+                pass
             }
         });
 
         const mailOptions = {
-            from: '',
+            from: process.env.EMAIL_FROM || 'your-default-email@example.com',
             to: email,
             subject: 'Password Reset OTP',
             text: `Your OTP for password reset is: ${otp}`
         };
 
-        transporter.sendMail(mailOptions, (error, info) => {
-            if (error) {
+        transporter.sendMail(mailOptions)
+            .then(info => {
+                console.log('Email sent:', info.response);
+                return res.status(200).json({
+                    success: true,
+                    message: 'OTP sent to your email',
+                });
+            })
+            .catch(error => {
                 console.error('Error sending email:', error);
                 return res.status(500).json({
                     success: false,
                     message: 'Failed to send OTP email'
                 });
-            }
-            console.log('Email sent:', info.response);
-            return res.status(200).json({
-                success: true,
-                message: 'OTP sent to your email',
             });
-        });
     } catch (error) {
         console.error('Error during forgot password:', error);
         return res.status(500).json({
@@ -205,6 +210,7 @@ const forgotPassword = async (req, res) => {
         });
     }
 };
+
 
 
 /*------------------------------------------------- Reset Password --------------------------------------------------*/
