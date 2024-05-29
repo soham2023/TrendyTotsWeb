@@ -4,7 +4,6 @@ const emailValidator = require('email-validator');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
-const otpGenerator = require('otp-generator');
 require('dotenv').config();
 
 const { SECRET_KEY, ADMINUSER, PASS, EMAIL_FROM } = process.env;
@@ -24,8 +23,7 @@ const getModelByRole = (role) => {
 const signUp = async (req, res) => {
     const { email, password, confirmPassword, role } = req.body;
     console.log(email, password, confirmPassword, role);
-    
-    // Check if all required fields are provided
+
     if (!email || !password || !confirmPassword) {
         return res.status(400).json({
             success: false,
@@ -33,7 +31,6 @@ const signUp = async (req, res) => {
         });
     }
 
-    // Validate email format
     const validEmail = emailValidator.validate(email);
     if (!validEmail) {
         return res.status(400).json({
@@ -43,7 +40,6 @@ const signUp = async (req, res) => {
     }
 
     try {
-        // Check if passwords match
         if (password !== confirmPassword) {
             return res.status(400).json({
                 success: false,
@@ -51,16 +47,10 @@ const signUp = async (req, res) => {
             });
         }
 
-        // Hash the password
         const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Set default role to 'user' if not provided
         const userRole = role || 'user';
 
-        // Get the appropriate model based on the role
         const model = getModelByRole(userRole);
-
-        // Create new admin/user
         const newUser = new model({
             email,
             password: hashedPassword,
@@ -87,7 +77,6 @@ const signUp = async (req, res) => {
 };
 
 /*------------------------------------------------- SignIn --------------------------------------------------*/
-
 const signIn = async (req, res) => {
     const { email, password } = req.body;
     console.log(email, password);
@@ -130,7 +119,6 @@ const signIn = async (req, res) => {
         });
     }
 };
-
 /*------------------------------------------------- Forgot Password --------------------------------------------------*/
 
 const forgotPassword = async (req, res) => {
@@ -151,7 +139,7 @@ const forgotPassword = async (req, res) => {
     }
 
     try {
-        const userRole = role || 'user'; // Default role to 'user' if not provided
+        const userRole = role || 'user';
         const model = getModelByRole(userRole);
         const user = await model.findOne({ email });
 
@@ -184,7 +172,7 @@ const forgotPassword = async (req, res) => {
         });
 
         const mailOptions = {
-            from: EMAIL_FROM || 'your-default-email@example.com',
+            from: EMAIL_FROM || 'no-reply@example.com',
             to: email,
             subject: 'Password Reset OTP',
             text: `Your OTP for password reset is: ${otp}`,
@@ -234,7 +222,7 @@ const resetPassword = async (req, res) => {
     }
 
     try {
-        const userRole = role || 'user'; // Default role to 'user' if not provided
+        const userRole = role || 'user';
         const model = getModelByRole(userRole);
         const user = await model.findOne({ email, resetPasswordOTPExpires: { $gt: Date.now() } });
 

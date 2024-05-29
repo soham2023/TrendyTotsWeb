@@ -51,26 +51,13 @@ const createProduct = async (req, res) => {
 // Get all products from the specified collection
 const getProducts = async (req, res) => {
     try {
-        const { collection } = req.query;
-        let products;
-        if (collection === 'summer-set') {
-            products = await SummerSetProduct.find({});
-        } else if (collection === 'winter-set') {
-            products = await WinterSetProduct.find({});
-        } else if (collection === 'jeans') {
-            products = await JeansProduct.find({});
-        } else if (collection === 't-shirt') {
-            products = await TShirtProduct.find({});
-        } else {
-            return res.status(400).json({ success: false, msg: 'Invalid collection' });
-        }
+        const products = await Product.find({});
         res.status(200).json({ success: true, data: products });
     } catch (error) {
         res.status(400).json({ success: false, msg: error.message });
     }
 };
-
-// Get a product by CustomId from the specified collection
+//Get a product by CustomId from the specified collection
 const getProductByCustomId = async (req, res) => {
     try {
         const { collection, customId } = req.params;
